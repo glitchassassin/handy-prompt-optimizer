@@ -54,6 +54,9 @@ deletes that database afterward.
 
 ## Connect to Codex Desktop over STDIO
 
+The MCP server communicates through stdin and stdout only. It does not open an
+HTTP listener.
+
 ```toml
 [mcp_servers.handy_prompt_lab]
 command = "node"
@@ -155,19 +158,6 @@ It preserves unrelated fields such as model-specific thinking toggles and
 creates a timestamped backup. Reload the model after promotion. The tool
 returns the winning prompt for manual entry in Handy; it does not write Handy
 settings.
-
-## HTTP development mode
-
-```bash
-npm run start:http
-```
-
-- MCP: `http://127.0.0.1:8787/mcp`
-- Health: `http://127.0.0.1:8787/`
-- Standalone widget shell: `http://127.0.0.1:8787/standalone`
-
-The HTTP server binds to localhost and has no authentication. Do not expose it
-publicly without adding authentication and an HTTPS gateway.
 
 ## References
 

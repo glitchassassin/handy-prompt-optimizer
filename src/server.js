@@ -2,7 +2,6 @@
 
 import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
-import { createServer as createHttpServer } from "node:http";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,7 +12,6 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
 import { defaults, lmStudioConfig, paths } from "./config.js";
@@ -30,7 +28,6 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const WIDGET_URI = "ui://handy-optimized-prompts/annotation-lab-v2.html";
 const ABOUT_URI = "handy-prompts://about";
 const VERSION = "0.2.0";
-const DEFAULT_PORT = 8787;
 const widgetHtml = readFileSync(resolve(HERE, "widget.html"), "utf8");
 
 const readOnlyAnnotations = {
@@ -988,122 +985,12 @@ export function createHandyPromptServer({
   return { server, store };
 }
 
-function allowedHost(req) {
-  const configured = (process.env.MCP_ALLOWED_HOSTS ?? "")
-    .split(",")
-    .map((value) => value.trim().toLowerCase())
-    .filter(Boolean);
-  const allowed = new Set(["127.0.0.1", "localhost", "[::1]", ...configured]);
-  const hostHeader = String(req.headers.host ?? "").toLowerCase();
-  const hostname = hostHeader.startsWith("[")
-    ? hostHeader.slice(0, hostHeader.indexOf("]") + 1)
-    : hostHeader.split(":")[0];
-  return allowed.has(hostname);
-}
-
-export async function startHttpServer({
-  port = Number(process.env.PORT ?? DEFAULT_PORT),
-  host = process.env.HOST ?? "127.0.0.1",
-} = {}) {
-  const sessions = new Map();
-  const httpServer = createHttpServer(async (req, res) => {
-    if (!req.url) {
-      res.writeHead(400).end("Missing URL");
-      return;
-    }
-    if (!allowedHost(req)) {
-      res
-        .writeHead(403, { "content-type": "text/plain" })
-        .end("Rejected Host header.");
-      return;
-    }
-
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    if (req.method === "GET" && url.pathname === "/") {
-      res
-        .writeHead(200, { "content-type": "application/json" })
-        .end(
-          JSON.stringify({
-            name: "handy-optimized-prompts",
-            version: VERSION,
-            mcp: "/mcp",
-            standalone: "/standalone",
-          })
-        );
-      return;
-    }
-    if (req.method === "GET" && url.pathname === "/standalone") {
-      res
-        .writeHead(200, { "content-type": "text/html; charset=utf-8" })
-        .end(widgetHtml);
-      return;
-    }
-    if (req.method === "OPTIONS" && url.pathname === "/mcp") {
-      res.writeHead(204, {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers":
-          "content-type, mcp-protocol-version, mcp-session-id",
-        "Access-Control-Expose-Headers": "Mcp-Session-Id",
-      });
-      res.end();
-      return;
-    }
-    if (
-      url.pathname === "/mcp" &&
-      req.method &&
-      ["POST", "GET", "DELETE"].includes(req.method)
-    ) {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
-      const sessionId = req.headers["mcp-session-id"];
-      let session =
-        typeof sessionId === "string" ? sessions.get(sessionId) : undefined;
-
-      if (!session && !sessionId && req.method === "POST") {
-        const created = createHandyPromptServer();
-        let transport;
-        transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
-          onsessioninitialized: (id) => {
-            sessions.set(id, { ...created, transport });
-          },
-        });
-        transport.onclose = () => {
-          if (transport.sessionId) sessions.delete(transport.sessionId);
-          created.store.close();
-        };
-        await created.server.connect(transport);
-        session = { ...created, transport };
-      }
-
-      if (!session) {
-        res
-          .writeHead(400, { "content-type": "application/json" })
-          .end(JSON.stringify({ error: "Unknown or missing MCP session" }));
-        return;
-      }
-      await session.transport.handleRequest(req, res);
-      return;
-    }
-    res.writeHead(404).end("Not found");
-  });
-
-  await new Promise((resolvePromise, reject) => {
-    httpServer.once("error", reject);
-    httpServer.listen(port, host, resolvePromise);
-  });
-  process.stderr.write(
-    `handy-optimized-prompts listening at http://${host}:${port}\n`
-  );
-  return httpServer;
-}
-
 async function main() {
-  const mode = process.argv.includes("--http") ? "http" : "stdio";
-  if (mode === "http") {
-    await startHttpServer();
-    return;
+  const unsupportedArgs = process.argv
+    .slice(2)
+    .filter((argument) => argument !== "--stdio");
+  if (unsupportedArgs.length) {
+    throw new Error(`Unsupported argument: ${unsupportedArgs.join(", ")}`);
   }
   const created = createHandyPromptServer();
   const transport = new StdioServerTransport();
