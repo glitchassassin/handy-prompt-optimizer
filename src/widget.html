@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Handy Transcript Annotations</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: var(--color-background-primary, #f4f6f8);
+        --surface: var(--color-background-secondary, #ffffff);
+        --text: var(--color-text-primary, #17202a);
+        --muted: var(--color-text-secondary, #667085);
+        --border: var(--color-border-primary, #d9dee7);
+        --accent: var(--color-accent-primary, #4f46e5);
+        --good: #16855b;
+        --warning: #b45309;
+        font-family: var(
+          --font-sans,
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif
+        );
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      main {
+        display: grid;
+        gap: 14px;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 16px;
+      }
+
+      header,
+      section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+      }
+
+      header,
+      .toolbar,
+      .actions,
+      .progress-labels {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 1.05rem;
+      }
+
+      h2 {
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .subtitle,
+      .metadata,
+      .progress-labels,
+      label {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .subtitle {
+        margin-top: 4px;
+      }
+
+      .status {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 5px 9px;
+        color: var(--muted);
+        font-size: 0.75rem;
+        white-space: nowrap;
+      }
+
+      .status.connected {
+        border-color: color-mix(in srgb, var(--good) 55%, transparent);
+        color: var(--good);
+      }
+
+      .progress-track {
+        height: 7px;
+        margin-top: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: var(--bg);
+      }
+
+      .progress-bar {
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--accent);
+        transition: width 160ms ease;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .copy {
+        min-height: 112px;
+        padding: 11px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--bg);
+        line-height: 1.48;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
+      textarea,
+      select,
+      input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        padding: 9px 10px;
+      }
+
+      textarea {
+        min-height: 126px;
+        line-height: 1.48;
+        resize: vertical;
+      }
+
+      label {
+        display: grid;
+        gap: 6px;
+      }
+
+      .span-2 {
+        grid-column: 1 / -1;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        background: var(--surface);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.82rem;
+        padding: 8px 11px;
+      }
+
+      button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: #fff;
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.55;
+      }
+
+      .message {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.45;
+      }
+
+      .message.error {
+        border-color: color-mix(in srgb, var(--warning) 55%, transparent);
+        color: var(--warning);
+      }
+
+      #complete-view {
+        display: none;
+        text-align: center;
+        padding: 28px 16px;
+      }
+
+      #complete-view.visible {
+        display: grid;
+        gap: 10px;
+      }
+
+      #editor.hidden {
+        display: none;
+      }
+
+      details {
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
+      pre {
+        max-height: 160px;
+        margin: 8px 0 0;
+        overflow: auto;
+        border-radius: 8px;
+        background: #111827;
+        color: #d1fae5;
+        font: 0.7rem/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        padding: 9px;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 700px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .span-2 {
+          grid-column: auto;
+        }
+
+        .actions {
+          align-items: stretch;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>Handy transcript annotations</h1>
+          <p class="subtitle">Review Codex proposals and approve the intended output</p>
+        </div>
+        <span id="connection-status" class="status">Connecting…</span>
+      </header>
+
+      <section>
+        <div class="progress-labels">
+          <span id="record-title">Waiting for annotation batch…</span>
+          <span id="progress-text">0 of 0</span>
+        </div>
+        <div class="progress-track">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+      </section>
+
+      <section id="editor" class="grid">
+        <div>
+          <h2>Raw Handy transcript</h2>
+          <div id="raw" class="copy">Waiting for tool result…</div>
+        </div>
+        <div>
+          <h2>Codex proposal</h2>
+          <div id="proposed" class="copy">Waiting for tool result…</div>
+        </div>
+
+        <label class="span-2">
+          Approved target
+          <textarea id="corrected"></textarea>
+        </label>
+
+        <label>
+          Decision
+          <select id="annotation-status">
+            <option value="approved">Approve proposal</option>
+            <option value="edited">Approve edited target</option>
+            <option value="skipped">Skip record</option>
+          </select>
+        </label>
+
+        <label>
+          Notes
+          <input id="notes" placeholder="Optional annotation notes" />
+        </label>
+
+        <div class="span-2 actions">
+          <div class="toolbar">
+            <button id="previous">Previous</button>
+            <button id="reset">Reset to proposal</button>
+          </div>
+          <button id="save-next" class="primary">Save &amp; next</button>
+        </div>
+      </section>
+
+      <section id="complete-view">
+        <h1>Annotation batch complete</h1>
+        <p id="complete-summary" class="subtitle"></p>
+        <div class="message">
+          End this task before prompt optimization. Start a fresh Codex task and
+          say: “Optimize my Handy prompt using the approved annotations.”
+        </div>
+      </section>
+
+      <div id="message" class="message">Initializing MCP Apps bridge…</div>
+
+      <details>
+        <summary>Widget diagnostics</summary>
+        <pre id="event-log">Widget loaded.</pre>
+      </details>
+    </main>
+
+    <script type="module">
+      const $ = (selector) => document.querySelector(selector);
+      const pending = new Map();
+      let rpcId = 0;
+      let bridgeReady;
+      let batchId = null;
+      let currentRecord = null;
+      let currentProgress = { index: 0, total: 0, remaining: 0, complete: false };
+      let currentSummary = {};
+      let hostContext = {};
+
+      const safeStringify = (value) => {
+        try {
+          return JSON.stringify(value, null, 2);
+        } catch {
+          return String(value);
+        }
+      };
+
+      const log = (label, value) => {
+        const stamp = new Date().toLocaleTimeString();
+        $("#event-log").textContent =
+          `[${stamp}] ${label}\n${safeStringify(value)}\n\n${$("#event-log").textContent}`.slice(
+            0,
+            14000
+          );
+      };
+
+      const setMessage = (text, error = false) => {
+        const element = $("#message");
+        element.textContent = text;
+        element.classList.toggle("error", error);
+      };
+
+      const notify = (method, params = {}) => {
+        window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+      };
+
+      const request = (method, params = {}) =>
+        new Promise((resolve, reject) => {
+          const id = ++rpcId;
+          pending.set(id, { resolve, reject, method });
+          window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
+          log(`→ ${method}`, params);
+          window.setTimeout(() => {
+            const item = pending.get(id);
+            if (!item) return;
+            pending.delete(id);
+            reject(new Error(`${method} timed out after 30 seconds`));
+          }, 30000);
+        });
+
+      const applyHostContext = (partial = {}) => {
+        hostContext = { ...hostContext, ...partial };
+        if (hostContext.theme) {
+          document.documentElement.style.colorScheme = hostContext.theme;
+        }
+        const variables = hostContext.styles?.variables;
+        if (variables) {
+          for (const [name, value] of Object.entries(variables)) {
+            if (value) document.documentElement.style.setProperty(name, value);
+          }
+        }
+      };
+
+      const render = () => {
+        const progress = currentProgress;
+        $("#progress-text").textContent = `${progress.index} of ${progress.total}`;
+        $("#progress-bar").style.width = progress.total
+          ? `${Math.round((progress.index / progress.total) * 100)}%`
+          : "0%";
+
+        if (!currentRecord || progress.complete) {
+          $("#editor").classList.add("hidden");
+          $("#complete-view").classList.add("visible");
+          $("#complete-summary").textContent =
+            `${currentSummary.approved ?? 0} approved, ` +
+            `${currentSummary.edited ?? 0} edited, ` +
+            `${currentSummary.skipped ?? 0} skipped.`;
+          $("#record-title").textContent = "Complete";
+          setMessage("All records in this batch have been reviewed.");
+          return;
+        }
+
+        $("#editor").classList.remove("hidden");
+        $("#complete-view").classList.remove("visible");
+        $("#record-title").textContent =
+          currentRecord.title || currentRecord.id;
+        $("#raw").textContent = currentRecord.raw ?? "";
+        $("#proposed").textContent = currentRecord.proposed ?? "";
+        $("#corrected").value =
+          currentRecord.corrected || currentRecord.proposed || "";
+        $("#notes").value = currentRecord.notes ?? "";
+        $("#annotation-status").value =
+          currentRecord.status === "edited"
+            ? "edited"
+            : currentRecord.status === "skipped"
+              ? "skipped"
+              : "approved";
+        $("#previous").disabled = progress.index <= 1;
+        setMessage("Review the target, then save and continue.");
+      };
+
+      const ingestToolResult = (result) => {
+        const payload = result?.structuredContent;
+        if (!payload) {
+          log("Tool result without structured content", result);
+          return;
+        }
+        if (payload.error) {
+          throw new Error(payload.error);
+        }
+        batchId = payload.batchId ?? batchId;
+        currentRecord = payload.record ?? null;
+        currentProgress = payload.progress ?? currentProgress;
+        currentSummary = payload.summary ?? currentSummary;
+        render();
+        log("Tool result", payload);
+      };
+
+      window.addEventListener("message", (event) => {
+        if (event.source !== window.parent) return;
+        const message = event.data;
+        if (!message || message.jsonrpc !== "2.0") return;
+
+        if (message.id !== undefined) {
+          const item = pending.get(message.id);
+          if (!item) return;
+          pending.delete(message.id);
+          if (message.error) {
+            item.reject(
+              new Error(message.error.message ?? safeStringify(message.error))
+            );
+          } else {
+            item.resolve(message.result);
+          }
+          log(`← ${item.method}`, message);
+          return;
+        }
+
+        if (message.method === "ui/notifications/tool-result") {
+          try {
+            ingestToolResult(message.params);
+          } catch (error) {
+            setMessage(error.message, true);
+          }
+        } else if (
+          message.method === "ui/notifications/host-context-changed"
+        ) {
+          applyHostContext(message.params);
+        } else if (message.method === "ui/resource-teardown") {
+          if (message.id !== undefined) {
+            window.parent.postMessage(
+              { jsonrpc: "2.0", id: message.id, result: {} },
+              "*"
+            );
+          }
+        } else {
+          log(`← ${message.method}`, message.params);
+        }
+      });
+
+      const initialize = async () => {
+        const result = await request("ui/initialize", {
+          protocolVersion: "2026-01-26",
+          appInfo: {
+            name: "handy-transcript-annotations",
+            version: "0.2.0",
+          },
+          appCapabilities: {
+            availableDisplayModes: ["inline", "fullscreen"],
+          },
+        });
+        applyHostContext(result?.hostContext);
+        notify("ui/notifications/initialized", {});
+        $("#connection-status").textContent = "Connected";
+        $("#connection-status").classList.add("connected");
+        setMessage("Waiting for annotation data…");
+        return result;
+      };
+
+      bridgeReady = initialize().catch((error) => {
+        $("#connection-status").textContent = "Bridge unavailable";
+        setMessage(error.message, true);
+        throw error;
+      });
+
+      const withButton = async (button, action) => {
+        button.disabled = true;
+        try {
+          await bridgeReady;
+          await action();
+        } catch (error) {
+          setMessage(error.message, true);
+          log("Action failed", error.message);
+        } finally {
+          button.disabled = false;
+        }
+      };
+
+      $("#corrected").addEventListener("input", () => {
+        if ($("#annotation-status").value === "skipped") return;
+        $("#annotation-status").value =
+          $("#corrected").value === currentRecord?.proposed
+            ? "approved"
+            : "edited";
+      });
+
+      $("#reset").addEventListener("click", () => {
+        if (!currentRecord) return;
+        $("#corrected").value = currentRecord.proposed ?? "";
+        $("#annotation-status").value = "approved";
+      });
+
+      $("#previous").addEventListener("click", () =>
+        withButton($("#previous"), async () => {
+          const result = await request("tools/call", {
+            name: "load_annotation_record",
+            arguments: {
+              batchId,
+              index: Math.max(0, currentProgress.index - 2),
+            },
+          });
+          ingestToolResult(result);
+        })
+      );
+
+      $("#save-next").addEventListener("click", () =>
+        withButton($("#save-next"), async () => {
+          if (!currentRecord) return;
+          setMessage("Saving annotation…");
+          const result = await request("tools/call", {
+            name: "save_annotation_and_next",
+            arguments: {
+              batchId,
+              recordId: currentRecord.id,
+              correctedText: $("#corrected").value,
+              status: $("#annotation-status").value,
+              notes: $("#notes").value,
+            },
+          });
+          ingestToolResult(result);
+        })
+      );
+
+      const observer = new ResizeObserver(() => {
+        notify("ui/notifications/size-changed", {
+          width: document.documentElement.scrollWidth,
+          height: document.documentElement.scrollHeight,
+        });
+      });
+      observer.observe(document.documentElement);
+    </script>
+  </body>
+</html>

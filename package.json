@@ -1,0 +1,23 @@
+{
+  "name": "handy-optimized-prompts",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Local MCP app for annotating Handy transcripts and optimizing LM Studio post-processing prompts.",
+  "scripts": {
+    "start": "node src/server.js --http",
+    "start:http": "node src/server.js --http",
+    "start:stdio": "node src/server.js --stdio",
+    "test": "node --test test/*.test.js",
+    "smoke": "node scripts/smoke-test.js",
+    "inspect": "npx @modelcontextprotocol/inspector node src/server.js --stdio"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.5",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "zod": "4.4.3"
+  }
+}
